@@ -6,125 +6,159 @@ import { SuisseRegular, SuisseBold } from "@/components/StyledText";
 import { View } from "react-native";
 import { fetchArt } from "@/utils/fetch-art";
 import { fetchQuote } from "@/utils/fetch-quote";
+import { Quote } from "@/app/(tabs)/_quote/quote";
+
+type ArtData = {
+  artistDisplayName: string;
+  artistDisplayBio: string;
+  culture: string;
+  objectName: string;
+  period: string;
+  dynasty: string;
+  reign: string;
+  portfolio: string;
+  artistNationality: string;
+  classification: string;
+  locale: string;
+  country: string;
+  objectDate: string;
+  rightsAndReproduction: string;
+  primaryImage: string;
+  primaryImageSmall: string;
+};
 
 export default function TabOneScreen() {
-  const [art, setArt] = useState<any>({});
-  const [randomNumber, setRandomNumber] = useState<string>("");
-  const [quote, setQuote] = useState<string>("");
-
-  console.log("quote", quote);
-
+  const [artData, setArtData] = useState<ArtData | null>(null);
+  const [allObjectIDs, setAllObjectIDs] = useState<number[]>([]);
+  const [randomObjectID, setRandomObjectID] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [imageLoaded, setImageLoaded] = useState<boolean>(false);
 
-  const generateRandomNumber = (min: number, max: number) => {
-    return Math.floor(Math.random() * (max - min) + min);
+  console.log("artData", artData);
+
+  console.log("randomObjectID", randomObjectID);
+
+  const getRandomObjectID = async () => {
+    const randomNumberGenerator =
+      allObjectIDs[Math.floor(Math.random() * allObjectIDs.length)];
+    setRandomObjectID(randomNumberGenerator);
   };
 
   useEffect(() => {
-    if (!randomNumber) {
-      setRandomNumber(generateRandomNumber(1, 1000).toString());
-    }
-  }, [randomNumber]);
-
-  console.log("randomNumber", randomNumber);
-  console.log("art", art);
-
-  useEffect(() => {
-    const fetchQuoteDetails = async () => {
-      setLoading(true); // Set loading to true when starting to fetch data
+    const fetchData = async () => {
       try {
-        const res = await fetchQuote();
-        setQuote(res); // Set quote state to the content property
+        const response = await fetch(
+          "https://collectionapi.metmuseum.org/public/collection/v1/search?departmentId=9&hasImages=true&q=images"
+        );
+        const data = await response.json();
+        const objectIDs: number[] = data.objectIDs;
+        setAllObjectIDs(objectIDs);
       } catch (error) {
-        console.error("Error fetching quote:", error);
+        console.error("Error fetching object IDs:", error);
       }
-      setLoading(false); // Set loading to false after data is fetched
     };
 
-    fetchQuoteDetails();
+    fetchData();
   }, []);
 
   useEffect(() => {
-    const fetchArtDetails = async () => {
-      setLoading(true); // Set loading to true when starting to fetch data
-      const res = await fetchArt(randomNumber);
-      if (typeof res === "object" && res !== null) {
-        setArt(res);
-      } else {
-        console.error("Invalid response format");
+    if (allObjectIDs.length > 0) {
+      const randomNumberGenerator =
+        allObjectIDs[Math.floor(Math.random() * allObjectIDs.length)];
+      setRandomObjectID(randomNumberGenerator);
+    }
+  }, [allObjectIDs]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        if (randomObjectID) {
+          const response = await fetch(
+            `https://collectionapi.metmuseum.org/public/collection/v1/objects/${randomObjectID}`
+          );
+          const data: ArtData = await response.json();
+
+          if (data.primaryImageSmall !== "") {
+            setArtData(data);
+            setImageLoaded(true); // Set image as loaded since we have data
+            setLoading(false);
+          } else {
+            console.log("Retry fetching - No valid image");
+
+            // Retry fetching if the artwork doesn't have a valid image
+            getRandomObjectID();
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching artwork data:", error);
+        console.log("Retry fetching - Error");
+        // Retry fetching if there is an error
+        getRandomObjectID();
       }
-      setLoading(false); // Set loading to false after data is fetched
     };
 
-    if (!art.primaryImage) {
-      fetchArtDetails();
-    }
-  }, [randomNumber, art.primaryImage]);
+    fetchData();
+  }, [randomObjectID]);
 
-  console.log("img", art.primaryImage);
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [artData]);
 
+  const handleImageLoad = () => {
+    setLoading(false);
+    setImageLoaded(true);
+  };
   return (
-    <View className="flex flex-col gap-4 flex-1 py-16 px-2">
-      <View className="flex flex-col gap-2 bg-gray-100 rounded-lg py-4 px-2">
-        <SuisseRegular className="antialiased text-4xl break-words">
-          "{quote.content}"
-        </SuisseRegular>
-        <SuisseRegular className="antialiased">{quote.author}</SuisseRegular>
+    <View className="flex-1 align-middle justify-center py-24 px-4">
+      <SuisseBold className="mb-4">⏹︎ Artwork of the Day</SuisseBold>
+      <Quote />
+      <View className="flex-1 mt-4">
+        {loading ? (
+          <ActivityIndicator size="large" color="#0000ff" />
+        ) : (
+          <>
+            <Image
+              className="flex-1 w-full h-full"
+              source={{ uri: artData?.primaryImage }}
+              contentFit="cover"
+            />
+            <SuisseRegular className="antialiased mt-2">→ About</SuisseRegular>
+          </>
+        )}
+        {/* {!imageLoaded && loading && (
+          <View className="flex-1 absolute top-0 left-0 w-full h-full items-center justify-center bg-white">
+            <ActivityIndicator size="large" color="#0000ff" />
+          </View>
+        )} */}
       </View>
-      <Image
-        style={{ flex: 1 }}
-        source={{ uri: art.primaryImage }}
-        contentFit="cover"
-        onLoad={() => setLoading(false)} // Set loading to false when the image is loaded
-      />
-      <View className="bg-gray-100 rounded-lg py-4 px-2">
-        {art.artistDisplayName && (
-          <SuisseRegular>{art.artistDisplayName}</SuisseRegular>
-        )}
-        {art.artistDisplayBio && (
-          <SuisseRegular>{art.artistDisplayBio}</SuisseRegular>
-        )}
-        {art.culture && <SuisseRegular>{art.culture}</SuisseRegular>}
-        {art.objectName && <SuisseRegular>{art.objectName}</SuisseRegular>}
-        {art.period && <SuisseRegular>{art.period}</SuisseRegular>}
-        {art.dynasty && <SuisseRegular>{art.dynasty}</SuisseRegular>}
-        {art.reign && <SuisseRegular>{art.reign}</SuisseRegular>}
-        {art.portfolio && <SuisseRegular>{art.portfolio}</SuisseRegular>}
-        {art.artistNationality && (
-          <SuisseRegular>
-            Artist Nationality: {art.artistNationality}
-          </SuisseRegular>
-        )}
-        {art.classification && (
-          <SuisseRegular>{art.classification}</SuisseRegular>
-        )}
-        {art.locale && <SuisseRegular>{art.locale}</SuisseRegular>}
-        {art.country && <SuisseRegular>{art.country}</SuisseRegular>}
-        {art.objectDate && <SuisseRegular>{art.objectDate}</SuisseRegular>}
-        {art.rightsAndReproduction && (
-          <SuisseRegular>{art.rightsAndReproduction}</SuisseRegular>
-        )}
-      </View>
+      {/* <View className="flex-1 py-2 bg-gray-100 rounded-lg">
+          {art.artistDisplayName && (
+            <SuisseRegular>{art.artistDisplayName}</SuisseRegular>
+          )}
+          {art.artistDisplayBio && (
+            <SuisseRegular>{art.artistDisplayBio}</SuisseRegular>
+          )}
+          {art.culture && <SuisseRegular>{art.culture}</SuisseRegular>}
+          {art.objectName && <SuisseRegular>{art.objectName}</SuisseRegular>}
+          {art.period && <SuisseRegular>{art.period}</SuisseRegular>}
+          {art.dynasty && <SuisseRegular>{art.dynasty}</SuisseRegular>}
+          {art.reign && <SuisseRegular>{art.reign}</SuisseRegular>}
+          {art.portfolio && <SuisseRegular>{art.portfolio}</SuisseRegular>}
+          {art.artistNationality && (
+            <SuisseRegular>
+              Artist Nationality: {art.artistNationality}
+            </SuisseRegular>
+          )}
+          {art.classification && (
+            <SuisseRegular>{art.classification}</SuisseRegular>
+          )}
+          {art.locale && <SuisseRegular>{art.locale}</SuisseRegular>}
+          {art.country && <SuisseRegular>{art.country}</SuisseRegular>}
+          {art.objectDate && <SuisseRegular>{art.objectDate}</SuisseRegular>}
+          {art.rightsAndReproduction && (
+            <SuisseRegular>{art.rightsAndReproduction}</SuisseRegular>
+          )}
+        </View> */}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  loadingIndicator: {
-    marginTop: 10,
-  },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: "80%",
-  },
-});
