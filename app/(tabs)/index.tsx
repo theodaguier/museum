@@ -7,6 +7,7 @@ import { View } from "react-native";
 import { fetchArt } from "@/utils/fetch-art";
 import { fetchQuote } from "@/utils/fetch-quote";
 import { Quote } from "@/app/(tabs)/_quote/quote";
+import { Sheet } from "@tamagui/sheet";
 
 type ArtData = {
   artistDisplayName: string;
@@ -109,29 +110,35 @@ export default function TabOneScreen() {
     setImageLoaded(true);
   };
   return (
-    <View className="flex-1 align-middle justify-center py-24 px-4">
-      <SuisseBold className="mb-4">⏹︎ Artwork of the Day</SuisseBold>
-      <Quote />
-      <View className="flex-1 mt-4">
-        {loading ? (
-          <ActivityIndicator size="large" color="#0000ff" />
-        ) : (
-          <>
-            <Image
-              className="flex-1 w-full h-full"
-              source={{ uri: artData?.primaryImage }}
-              contentFit="cover"
-            />
-            <SuisseRegular className="antialiased mt-2">→ About</SuisseRegular>
-          </>
-        )}
-        {/* {!imageLoaded && loading && (
+    <>
+      <View className="flex-1 align-middle justify-center py-24 px-4">
+        <SuisseBold className="mb-4">⏹︎ Artwork of the Day</SuisseBold>
+        <Quote />
+        <View className="flex-1 mt-4">
+          {loading ? (
+            <ActivityIndicator size="large" color="#0000ff" />
+          ) : (
+            <>
+              <Image
+                className="flex-1 w-full h-full"
+                source={{ uri: artData?.primaryImage }}
+                contentFit="cover"
+              />
+              <SuisseRegular className="antialiased mt-2">
+                → About
+              </SuisseRegular>
+            </>
+          )}
+          {/* {!imageLoaded && loading && (
           <View className="flex-1 absolute top-0 left-0 w-full h-full items-center justify-center bg-white">
             <ActivityIndicator size="large" color="#0000ff" />
           </View>
         )} */}
+        </View>
       </View>
-      {/* <View className="flex-1 py-2 bg-gray-100 rounded-lg">
+      <Sheet open snapPoints={[50, 100]}>
+        <Sheet.Frame>
+          {/* <View className="flex-1 py-2 bg-gray-100 rounded-lg">
           {art.artistDisplayName && (
             <SuisseRegular>{art.artistDisplayName}</SuisseRegular>
           )}
@@ -159,6 +166,8 @@ export default function TabOneScreen() {
             <SuisseRegular>{art.rightsAndReproduction}</SuisseRegular>
           )}
         </View> */}
-    </View>
+        </Sheet.Frame>
+      </Sheet>
+    </>
   );
 }
